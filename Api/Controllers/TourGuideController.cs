@@ -1,5 +1,6 @@
 ﻿using GpsUtil.Location;
 using Microsoft.AspNetCore.Mvc;
+using TourGuide.Dtos;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
 using TripPricer;
@@ -11,10 +12,12 @@ namespace TourGuide.Controllers;
 public class TourGuideController : ControllerBase
 {
     private readonly ITourGuideService _tourGuideService;
+    private readonly IRewardsService _rewardsService;
 
-    public TourGuideController(ITourGuideService tourGuideService)
+    public TourGuideController(ITourGuideService tourGuideService, IRewardsService rewardsService)
     {
         _tourGuideService = tourGuideService;
+        _rewardsService = rewardsService;
     }
 
     [HttpGet("getLocation")]
@@ -36,9 +39,35 @@ public class TourGuideController : ControllerBase
     [HttpGet("getNearbyAttractions")]
     public ActionResult<List<Attraction>> GetNearbyAttractions([FromQuery] string userName)
     {
-        var visitedLocation = _tourGuideService.GetUserLocation(GetUser(userName));
+        var user = GetUser(userName);
+        if (user == null)
+        {
+            return NotFound("User '{userName}' not found");
+        }
+
+        var visitedLocation = _tourGuideService.GetUserLocation(user);
+        var userLoc = visitedLocation.Location;
+
         var attractions = _tourGuideService.GetNearByAttractions(visitedLocation);
-        return Ok(attractions);
+
+        var result = attractions.Select(a =>
+        {
+            var attractionLoc = new Locations(a.Latitude, a.Longitude);
+            var distance = _rewardsService.GetDistance(attractionLoc, userLoc);
+            var points = _rewardsService.GetRewardPoints(a, user);
+
+            return new NearbyAttractionDto(
+                a.AttractionName,
+                a.Latitude,
+                a.Longitude,
+                userLoc.Latitude,
+                userLoc.Longitude,
+                Math.Round(distance, 2),
+                points
+            );
+        }).ToList();
+
+        return Ok(result);
     }
 
     [HttpGet("getRewards")]
