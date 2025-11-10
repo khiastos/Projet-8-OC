@@ -1,7 +1,5 @@
-﻿using GpsUtil.Location;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using System.Globalization;
+﻿using System.Globalization;
+using GpsUtil.Location;
 using TourGuide.LibrairiesWrappers.Interfaces;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
@@ -74,10 +72,21 @@ public class TourGuideService : ITourGuideService
 
     public List<Provider> GetTripDeals(User user)
     {
-        int cumulativeRewardPoints = user.UserRewards.Sum(i => i.RewardPoints);
-        List<Provider> providers = _tripPricer.GetPrice(TripPricerApiKey, user.UserId,
-            user.UserPreferences.NumberOfAdults, user.UserPreferences.NumberOfChildren,
-            user.UserPreferences.TripDuration, cumulativeRewardPoints);
+        user.UserPreferences ??= new UserPreferences();
+
+        int adults = Math.Max(1, user.UserPreferences.NumberOfAdults);
+        int children = Math.Max(0, user.UserPreferences.NumberOfChildren);
+        int duration = Math.Max(1, user.UserPreferences.TripDuration);
+
+        int cumulativeRewardPoints = user.UserRewards?.Sum(i => i.RewardPoints) ?? 0;
+
+        List<Provider> providers = _tripPricer.GetPrice(
+            TripPricerApiKey,
+            user.UserId,
+            adults,
+            children,
+            duration,
+            cumulativeRewardPoints);
         user.TripDeals = providers;
         return providers;
     }
@@ -92,16 +101,14 @@ public class TourGuideService : ITourGuideService
 
     public List<Attraction> GetNearByAttractions(VisitedLocation visitedLocation)
     {
-        List<Attraction> nearbyAttractions = new ();
-        foreach (var attraction in _gpsUtil.GetAttractions())
-        {
-            if (_rewardsService.IsWithinAttractionProximity(attraction, visitedLocation.Location))
-            {
-                nearbyAttractions.Add(attraction);
-            }
-        }
+        var here = visitedLocation.Location;
 
-        return nearbyAttractions;
+        return _gpsUtil.GetAttractions()
+            .OrderBy(a => _rewardsService.GetDistance(
+                new Locations(a.Latitude, a.Longitude),
+                here))
+            .Take(5)
+            .ToList();
     }
 
     private void AddShutDownHook()

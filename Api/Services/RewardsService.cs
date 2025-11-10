@@ -18,7 +18,7 @@ public class RewardsService : IRewardsService
     public RewardsService(IGpsUtil gpsUtil, IRewardCentral rewardCentral)
     {
         _gpsUtil = gpsUtil;
-        _rewardsCentral =rewardCentral;
+        _rewardsCentral = rewardCentral;
         _proximityBuffer = _defaultProximityBuffer;
     }
 
@@ -34,24 +34,50 @@ public class RewardsService : IRewardsService
 
     public void CalculateRewards(User user)
     {
-        count++;
-        List<VisitedLocation> userLocations = user.VisitedLocations;
-        List<Attraction> attractions = _gpsUtil.GetAttractions();
+        // Compteur thread-safe
+        Interlocked.Increment(ref count);
+
+        // Snapshots pour éviter les problèmes de collection modifiée pendant l'itération
+        var userLocations = (user.VisitedLocations ?? new List<VisitedLocation>()).ToArray();
+
+        if (userLocations.Length == 0)
+        {
+            var current = _gpsUtil.GetUserLocation(user.UserId);
+            userLocations = new[] { current };
+        }
+
+        var attractions = (_gpsUtil.GetAttractions() ?? new List<Attraction>()).ToArray();
+
+        // Récompenses déjà attribuées pour éviter les doublons (HashSet pour performance)
+        var rewardedNames = new HashSet<string>((user.UserRewards ?? new List<UserReward>())
+                .Select(r => r.Attraction.AttractionName));
 
         foreach (var visitedLocation in userLocations)
         {
             foreach (var attraction in attractions)
             {
-                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
+                if (rewardedNames.Contains(attraction.AttractionName))
+                    continue;
+
+                // Vérification de la proximité
+                if (NearAttraction(visitedLocation, attraction))
                 {
-                    if (NearAttraction(visitedLocation, attraction))
+                    var points = GetRewardPoints(attraction, user);
+                    var reward = new UserReward(visitedLocation, attraction, points);
+
+                    lock (user)
                     {
-                        user.AddUserReward(new UserReward(visitedLocation, attraction, GetRewardPoints(attraction, user)));
+                        if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
+                        {
+                            user.AddUserReward(reward);
+                            rewardedNames.Add(attraction.AttractionName);
+                        }
                     }
                 }
             }
         }
     }
+
 
     public bool IsWithinAttractionProximity(Attraction attraction, Locations location)
     {
