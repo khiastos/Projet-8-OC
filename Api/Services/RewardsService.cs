@@ -1,4 +1,6 @@
-﻿using GpsUtil.Location;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using GpsUtil.Location;
 using TourGuide.LibrairiesWrappers.Interfaces;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
@@ -14,12 +16,16 @@ public class RewardsService : IRewardsService
     private readonly IGpsUtil _gpsUtil;
     private readonly IRewardCentral _rewardsCentral;
     private static int count = 0;
+    private readonly List<Attraction> _attractions;
+    private readonly ConcurrentDictionary<(Guid, string), double> _distanceCache;
 
     public RewardsService(IGpsUtil gpsUtil, IRewardCentral rewardCentral)
     {
         _gpsUtil = gpsUtil;
+        _attractions = _gpsUtil.GetAttractions();
         _rewardsCentral = rewardCentral;
         _proximityBuffer = _defaultProximityBuffer;
+        _distanceCache = new ConcurrentDictionary<(Guid, string), double>();
     }
 
     public void SetProximityBuffer(int proximityBuffer)
@@ -34,6 +40,7 @@ public class RewardsService : IRewardsService
 
     public void CalculateRewards(User user)
     {
+        var sw = Stopwatch.StartNew();
         // Compteur thread-safe
         Interlocked.Increment(ref count);
 
@@ -46,18 +53,31 @@ public class RewardsService : IRewardsService
             userLocations = new[] { current };
         }
 
+        // Récupération des attractions et conversion en tableau pour performance
         var attractions = (_gpsUtil.GetAttractions() ?? new List<Attraction>()).ToArray();
 
         // Récompenses déjà attribuées pour éviter les doublons (HashSet pour performance)
         var rewardedNames = new HashSet<string>((user.UserRewards ?? new List<UserReward>())
                 .Select(r => r.Attraction.AttractionName));
 
+
         foreach (var visitedLocation in userLocations)
         {
             foreach (var attraction in attractions)
             {
-                if (rewardedNames.Contains(attraction.AttractionName))
-                    continue;
+                var key = (user.UserId, attraction.AttractionName);
+                double distance;
+
+                if (_distanceCache.ContainsKey(key))
+                {
+                    distance = _distanceCache[key];
+                }
+                else
+                {
+                    distance = GetDistance(visitedLocation.Location, attraction);
+                    _distanceCache.TryAdd(key, distance);
+                }
+                Console.WriteLine($"Distance between user {user.UserName} and attraction {attraction.AttractionName}: {distance:F2} miles");
 
                 // Vérification de la proximité
                 if (NearAttraction(visitedLocation, attraction))
@@ -70,12 +90,14 @@ public class RewardsService : IRewardsService
                         if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
                         {
                             user.AddUserReward(reward);
-                            rewardedNames.Add(attraction.AttractionName);
                         }
                     }
                 }
             }
         }
+
+        sw.Stop();
+        Console.WriteLine($"CalculateRewards for {user.UserName}: {sw.Elapsed.TotalMilliseconds:F2} ms");
     }
 
 

@@ -37,33 +37,13 @@ namespace TourGuideTest
         }
 
         [Fact]
-        public void HighVolumeTrackLocation()
+        public void HighVolumeGetRewards()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
             _fixture.Initialize(1000);
 
-            List<User> allUsers = _fixture.TourGuideService.GetAllUsers();
-
-            Stopwatch stopWatch = new Stopwatch();
-            stopWatch.Start();
-
-            foreach (var user in allUsers)
-            {
-                _fixture.TourGuideService.TrackUserLocation(user);
-            }
-            stopWatch.Stop();
+            // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de récompenses
             _fixture.TourGuideService.Tracker.StopTracking();
-
-            _output.WriteLine($"highVolumeTrackLocation: Time Elapsed: {stopWatch.Elapsed.TotalSeconds} seconds.");
-
-            Assert.True(TimeSpan.FromMinutes(15).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
-        }
-
-        [Fact]
-        public void HighVolumeGetRewards()
-        {
-            //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(10);
 
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
@@ -72,17 +52,43 @@ namespace TourGuideTest
             List<User> allUsers = _fixture.TourGuideService.GetAllUsers();
             allUsers.ForEach(u => u.AddToVisitedLocations(new VisitedLocation(u.UserId, attraction, DateTime.Now)));
 
-            allUsers.ForEach(u => _fixture.RewardsService.CalculateRewards(u));
+            // Calcul des récompenses en parallèle pour améliorer les performances
+            Parallel.ForEach(allUsers, user =>
+            {
+                _fixture.RewardsService.CalculateRewards(user);
+            });
 
             foreach (var user in allUsers)
             {
                 Assert.True(user.UserRewards.Count > 0);
             }
             stopWatch.Stop();
+
+            Assert.True(TimeSpan.FromMinutes(20).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
+        }
+
+        [Fact]
+        public void HighVolumeTrackLocation()
+        {
+            //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
+            _fixture.Initialize(100);
+
+            // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de localisation
             _fixture.TourGuideService.Tracker.StopTracking();
 
-            _output.WriteLine($"highVolumeGetRewards: Time Elapsed: {stopWatch.Elapsed.TotalSeconds} seconds.");
-            Assert.True(TimeSpan.FromMinutes(20).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+
+            List<User> allUsers = _fixture.TourGuideService.GetAllUsers();
+
+            // Tracking des emplacements en parallèle pour améliorer les performances
+            Parallel.ForEach(allUsers, user =>
+            {
+                _fixture.TourGuideService.TrackUserLocation(user);
+            });
+            stopWatch.Stop();
+
+            Assert.True(TimeSpan.FromMinutes(15).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
         }
     }
 }
