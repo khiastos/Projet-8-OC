@@ -2,9 +2,9 @@ name: CI .NET
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
   build-test-publish:
@@ -29,11 +29,10 @@ jobs:
       run: dotnet test --configuration Release --no-build
 
     - name: Publier l'API
-      run: dotnet publish TourGuide/TourGuide.csproj -c Release -o publish
+      run: dotnet publish Api/Api.csproj -c Release -o publish
 
     - name: Upload de l'artifact
       uses: actions/upload-artifact@v3
       with:
         name: build-net7
         path: publish
-
