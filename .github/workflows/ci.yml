@@ -32,7 +32,7 @@ jobs:
       run: dotnet publish Api/Api.csproj -c Release -o publish
 
     - name: Upload de l'artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-net7
         path: publish
