@@ -37,7 +37,7 @@ public class TourGuideController : ControllerBase
     // The reward points for visiting each Attraction.
     //    Note: Attraction reward points can be gathered from RewardsCentral
     [HttpGet("getNearbyAttractions")]
-    public ActionResult<List<Attraction>> GetNearbyAttractions([FromQuery] string userName)
+    public ActionResult<List<NearbyAttractionDto>> GetNearbyAttractions([FromQuery] string userName)
     {
         var user = GetUser(userName);
         if (user == null)
@@ -47,25 +47,35 @@ public class TourGuideController : ControllerBase
 
         var visitedLocation = _tourGuideService.GetUserLocation(user);
         var userLoc = visitedLocation.Location;
+        var attractions = _tourGuideService.GetAttractions();
 
-        var attractions = _tourGuideService.GetNearByAttractions(visitedLocation);
-
-        var result = attractions.Select(a =>
+        var result = attractions
+            .Select(a =>
         {
             var attractionLoc = new Locations(a.Latitude, a.Longitude);
             var distance = _rewardsService.GetDistance(attractionLoc, userLoc);
             var points = _rewardsService.GetRewardPoints(a, user);
 
-            return new NearbyAttractionDto(
-                a.AttractionName,
-                a.Latitude,
-                a.Longitude,
-                userLoc.Latitude,
-                userLoc.Longitude,
-                Math.Round(distance, 2),
-                points
-            );
-        }).ToList();
+            return new
+            {
+                Attraction = a,
+                Distance = distance,
+                Points = points,
+            };
+
+        }).OrderBy(x => x.Distance)
+          .Take(5)
+          .Select(x => new NearbyAttractionDto(
+              x.Attraction.AttractionName,
+              x.Attraction.Latitude,
+              x.Attraction.Longitude,
+              userLoc.Latitude,
+              userLoc.Longitude,
+              // Round distance to 2 decimal places
+              Math.Round(x.Distance, 2),
+              x.Points
+              ))
+            .ToList();
 
         return Ok(result);
     }

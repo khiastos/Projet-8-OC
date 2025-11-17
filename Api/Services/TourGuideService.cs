@@ -72,21 +72,10 @@ public class TourGuideService : ITourGuideService
 
     public List<Provider> GetTripDeals(User user)
     {
-        user.UserPreferences ??= new UserPreferences();
-
-        int adults = Math.Max(1, user.UserPreferences.NumberOfAdults);
-        int children = Math.Max(0, user.UserPreferences.NumberOfChildren);
-        int duration = Math.Max(1, user.UserPreferences.TripDuration);
-
-        int cumulativeRewardPoints = user.UserRewards?.Sum(i => i.RewardPoints) ?? 0;
-
-        List<Provider> providers = _tripPricer.GetPrice(
-            TripPricerApiKey,
-            user.UserId,
-            adults,
-            children,
-            duration,
-            cumulativeRewardPoints);
+        int cumulativeRewardPoints = user.UserRewards.Sum(i => i.RewardPoints);
+        List<Provider> providers = _tripPricer.GetPrice(TripPricerApiKey, user.UserId,
+            user.UserPreferences.NumberOfAdults, user.UserPreferences.NumberOfChildren,
+            user.UserPreferences.TripDuration, cumulativeRewardPoints);
         user.TripDeals = providers;
         return providers;
     }
@@ -110,7 +99,10 @@ public class TourGuideService : ITourGuideService
             .Take(5)
             .ToList();
     }
-
+    public List<Attraction> GetAttractions()
+    {
+        return _gpsUtil.GetAttractions();
+    }
     private void AddShutDownHook()
     {
         AppDomain.CurrentDomain.ProcessExit += (sender, e) => Tracker.StopTracking();
