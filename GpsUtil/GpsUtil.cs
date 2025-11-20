@@ -12,7 +12,7 @@ public class GpsUtil
         rateLimiter.Wait();
         try
         {
-            //Sleep();
+            Sleep();
 
             double longitude = ThreadLocalRandom.NextDouble(-180.0, 180.0);
             longitude = Math.Round(longitude, 6);
@@ -30,6 +30,7 @@ public class GpsUtil
         }
     }
 
+    // Permet de récupérer les emplacements de plusieurs utilisateurs en une seule fois
     public List<VisitedLocation> GetUsersLocation(IEnumerable<Guid> usersId)
     {
         List<VisitedLocation> visitedLocations = new();

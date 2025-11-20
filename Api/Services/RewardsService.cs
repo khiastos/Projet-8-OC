@@ -38,6 +38,7 @@ public class RewardsService : IRewardsService
         _proximityBuffer = _defaultProximityBuffer;
     }
 
+    // Permet de calculer les Rewards pour plusieurs users en même temps avec du parallélisme
     public void CalculateRewards(List<User> users)
     {
         var sw = Stopwatch.StartNew();
