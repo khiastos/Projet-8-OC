@@ -28,6 +28,12 @@ public class User
         VisitedLocations.Add(visitedLocation);
     }
 
+    // Permet d'ajouter plusieurs visitedLocation d'un coup à un user
+    public void AddToVisitedLocations(List<VisitedLocation> visitedLocation)
+    {
+        VisitedLocations.AddRange(visitedLocation);
+    }
+
     public void ClearVisitedLocations()
     {
         VisitedLocations.Clear();

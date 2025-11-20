@@ -38,12 +38,19 @@ public class RewardsService : IRewardsService
         _proximityBuffer = _defaultProximityBuffer;
     }
 
-    public void CalculateRewards(User user)
+    public void CalculateRewards(List<User> users)
     {
         var sw = Stopwatch.StartNew();
         // Compteur thread-safe
         Interlocked.Increment(ref count);
 
+        Parallel.ForEach(users, CalculateRewards);
+
+        sw.Stop();
+    }
+
+    public void CalculateRewards(User user)
+    {
         // Snapshots pour éviter les problèmes de collection modifiée pendant l'itération
         var userLocations = (user.VisitedLocations ?? new List<VisitedLocation>()).ToArray();
 
@@ -77,7 +84,6 @@ public class RewardsService : IRewardsService
                     distance = GetDistance(visitedLocation.Location, attraction);
                     _distanceCache.TryAdd(key, distance);
                 }
-                Console.WriteLine($"Distance between user {user.UserName} and attraction {attraction.AttractionName}: {distance:F2} miles");
 
                 // Vérification de la proximité
                 if (NearAttraction(visitedLocation, attraction))
@@ -95,11 +101,7 @@ public class RewardsService : IRewardsService
                 }
             }
         }
-
-        sw.Stop();
-        Console.WriteLine($"CalculateRewards for {user.UserName}: {sw.Elapsed.TotalMilliseconds:F2} ms");
     }
-
 
     public bool IsWithinAttractionProximity(Attraction attraction, Locations location)
     {

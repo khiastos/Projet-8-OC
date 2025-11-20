@@ -21,4 +21,9 @@ public class GpsUtilWrapper : IGpsUtil
     {
         return _gpsUtil.GetAttractions();
     }
+
+    public List<VisitedLocation> GetUsersLocation(IEnumerable<Guid> usersId)
+    {
+        return _gpsUtil.GetUsersLocation(usersId);
+    }
 }

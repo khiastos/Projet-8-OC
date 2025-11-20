@@ -18,5 +18,6 @@ namespace TourGuide.Services.Interfaces
         VisitedLocation GetUserLocation(User user);
         List<UserReward> GetUserRewards(User user);
         VisitedLocation TrackUserLocation(User user);
+        VisitedLocation[] TrackUserLocation(List<User> users);
     }
 }

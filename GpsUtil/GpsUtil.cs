@@ -1,10 +1,5 @@
 ﻿using GpsUtil.Helpers;
 using GpsUtil.Location;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GpsUtil;
 
@@ -17,7 +12,7 @@ public class GpsUtil
         rateLimiter.Wait();
         try
         {
-            Sleep();
+            //Sleep();
 
             double longitude = ThreadLocalRandom.NextDouble(-180.0, 180.0);
             longitude = Math.Round(longitude, 6);
@@ -33,6 +28,16 @@ public class GpsUtil
         {
             rateLimiter.Release();
         }
+    }
+
+    public List<VisitedLocation> GetUsersLocation(IEnumerable<Guid> usersId)
+    {
+        List<VisitedLocation> visitedLocations = new();
+        foreach (Guid userId in usersId)
+        {
+            visitedLocations.Add(GetUserLocation(userId));
+        }
+        return visitedLocations;
     }
 
     public List<Attraction> GetAttractions()

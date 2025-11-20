@@ -79,7 +79,20 @@ public class TourGuideService : ITourGuideService
         user.TripDeals = providers;
         return providers;
     }
+    public VisitedLocation[] TrackUserLocation(List<User> users)
+    {
+        var visitedLocations = _gpsUtil.GetUsersLocation(users.Select(u => u.UserId));
 
+        for (int i = 0; i < users.Count; i++)
+        {
+            var visitedLocation = visitedLocations[i];
+            users[i].AddToVisitedLocations(visitedLocation);
+        }
+
+        _rewardsService.CalculateRewards(users);
+
+        return visitedLocations.ToArray();
+    }
     public VisitedLocation TrackUserLocation(User user)
     {
         VisitedLocation visitedLocation = _gpsUtil.GetUserLocation(user.UserId);

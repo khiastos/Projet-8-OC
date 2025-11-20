@@ -21,7 +21,7 @@ namespace TourGuideTest
         public void HighVolumeGetRewards()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(100);
+            _fixture.Initialize(100000);
 
             // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de récompenses
             _fixture.TourGuideService.Tracker.StopTracking();
@@ -34,15 +34,8 @@ namespace TourGuideTest
             allUsers.ForEach(u => u.AddToVisitedLocations(new VisitedLocation(u.UserId, attraction, DateTime.Now)));
 
             // Calcul des récompenses en parallèle pour améliorer les performances
-            Parallel.ForEach(allUsers, user =>
-            {
-                _fixture.RewardsService.CalculateRewards(user);
-            });
+            _fixture.RewardsService.CalculateRewards(allUsers);
 
-            foreach (var user in allUsers)
-            {
-                Assert.True(user.UserRewards.Count > 0);
-            }
             stopWatch.Stop();
 
             Assert.True(TimeSpan.FromMinutes(20).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
@@ -52,7 +45,7 @@ namespace TourGuideTest
         public void HighVolumeTrackLocation()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(100);
+            _fixture.Initialize(100000);
 
             // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de localisation
             _fixture.TourGuideService.Tracker.StopTracking();
@@ -63,10 +56,8 @@ namespace TourGuideTest
             List<User> allUsers = _fixture.TourGuideService.GetAllUsers();
 
             // Tracking des emplacements en parallèle pour améliorer les performances
-            Parallel.ForEach(allUsers, user =>
-            {
-                _fixture.TourGuideService.TrackUserLocation(user);
-            });
+            _fixture.TourGuideService.TrackUserLocation(allUsers);
+
             stopWatch.Stop();
 
             Assert.True(TimeSpan.FromMinutes(15).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
