@@ -79,16 +79,15 @@ public class TourGuideService : ITourGuideService
         user.TripDeals = providers;
         return providers;
     }
+    // Permet de suivre la loc de plusieurs user en même temps
     public VisitedLocation[] TrackUserLocation(List<User> users)
     {
         var visitedLocations = _gpsUtil.GetUsersLocation(users.Select(u => u.UserId));
 
-        for (int i = 0; i < users.Count; i++)
+        Parallel.For(0, users.Count, i =>
         {
-            var visitedLocation = visitedLocations[i];
-            users[i].AddToVisitedLocations(visitedLocation);
-        }
-
+            users[i].AddToVisitedLocations(visitedLocations[i]);
+        });
         _rewardsService.CalculateRewards(users);
 
         return visitedLocations.ToArray();

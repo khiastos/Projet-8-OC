@@ -1,4 +1,5 @@
-﻿using GpsUtil.Helpers;
+﻿using System.Collections.Concurrent;
+using GpsUtil.Helpers;
 using GpsUtil.Location;
 
 namespace GpsUtil;
@@ -33,12 +34,14 @@ public class GpsUtil
     // Permet de récupérer les emplacements de plusieurs utilisateurs en une seule fois
     public List<VisitedLocation> GetUsersLocation(IEnumerable<Guid> usersId)
     {
-        List<VisitedLocation> visitedLocations = new();
-        foreach (Guid userId in usersId)
+        var bag = new ConcurrentBag<VisitedLocation>();
+        Parallel.ForEach(usersId, userId =>
         {
-            visitedLocations.Add(GetUserLocation(userId));
-        }
-        return visitedLocations;
+            var location = GetUserLocation(userId);
+            bag.Add(location);
+        });
+
+        return bag.ToList();
     }
 
     public List<Attraction> GetAttractions()
