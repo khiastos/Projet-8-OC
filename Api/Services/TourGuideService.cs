@@ -84,6 +84,7 @@ public class TourGuideService : ITourGuideService
     {
         var visitedLocations = _gpsUtil.GetUsersLocation(users.Select(u => u.UserId));
 
+        // Mise à jour des visitedLocations des users en parallèle
         Parallel.For(0, users.Count, i =>
         {
             users[i].AddToVisitedLocations(visitedLocations[i]);

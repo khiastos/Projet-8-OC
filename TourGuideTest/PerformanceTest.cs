@@ -33,7 +33,7 @@ namespace TourGuideTest
             List<User> allUsers = _fixture.TourGuideService.GetAllUsers();
             allUsers.ForEach(u => u.AddToVisitedLocations(new VisitedLocation(u.UserId, attraction, DateTime.Now)));
 
-            // Calcul des récompenses en parallèle pour améliorer les performances
+            // Calcul des récompenses (fait en parallèle dans la méthode)
             _fixture.RewardsService.CalculateRewards(allUsers);
 
             stopWatch.Stop();
@@ -55,7 +55,7 @@ namespace TourGuideTest
 
             List<User> allUsers = _fixture.TourGuideService.GetAllUsers();
 
-            // Tracking des emplacements en parallèle pour améliorer les performances
+            // Suivi de la localisation (fait en parallèle dans la méthode)
             _fixture.TourGuideService.TrackUserLocation(allUsers);
 
             stopWatch.Stop();
