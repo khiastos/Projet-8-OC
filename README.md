@@ -21,8 +21,6 @@ Pour cela, on récupère toutes les attractions, on calcule pour chacune la dist
 ---
 ## Amélioration des tests qui échouaient
 
-_- Pour HighVolumeGetRewards :_ Le test échouait car les récompenses étaient calculées utilisateurs par utilisateurs, on a donc utilisé Parallel.ForEach au sein de ce test unitaire pour que plusieurs utilisateurs soient traités en même temps. 
-
 _- Pour NearAllAttractions :_ Le test échouait car CalculateRewards n’attribuait des récompenses qu’aux attractions « proches », en fonction du proximityBuffer. Sauf que le test attend que toutes les attractions donnent une récompense, même très éloignées. En configurant le proximityBuffer avec int.MaxValue, la condition devient vraie pour toutes les attractions, ce qui permet d’attribuer une récompense pour chacune et de faire passer le test.
 
 _- Pour GetTripDeals :_ Le test échouait car CalculateRewards ne générait pas toutes les récompenses, ce qui faisait que parfois l'utilisateur n'avait pas de récompenses, vu que c'était uniquement les attractions les plus proches qui en avaient une. 
@@ -32,10 +30,11 @@ _- Pour GetTripDeals :_ Le test échouait car CalculateRewards ne générait pas
 
 L'application n'était pas faite pour fonctionner avec autant d'utilisateurs, ce qui fait qu'elle était trop lente et les utilisateurs s'en plaignaient. Il faudrait qu'elle supporte facilement 100 000 utilisateurs.
 
-Il a donc fallu optimiser 2 services : GpsUtil et RewardsCentral : 
+Il a donc fallu optimiser 2 méthodes : CalculateRewards et TrackUserLocation : 
 
-- _Pour GpsUtil :_ on a parallélisé l'appel à TrackUserLocation(), permettant de traiter la localisation de plusieurs utilisateurs en même temps au lieu la traiter de manière séquentielle.
-- _Pour RewardsCentral :_ on a ajouté un cache de distance via un ConcurrentDictionary afin d'éviter de recalculer inutilement les distances, et on a également parallélisé le calcul des récompenses, ce qui permet de traiter plusieurs utilisateurs simultanément.
+- _Pour CalculateRewards :_ Afin de traiter 100 000 utilisateurs qui obtiennent leurs récompenses en moins de 20min, il a fallu optimiser la fonction CalculateRewards en surchargeant la méthode pour qu'elle retourne soit une liste d'utilisateurs, soit un seul utilisateur. Dans la surcharge qui renvoie une liste d'utilisateurs on utilise du parallélisme avec Parallel.ForEach pour pouvoir calculer les récompenses de plusieurs utilisateurs dans différents threads (sur la méthode CalculateRewards qui renvoie qu'un utilisateur). Ainsi, grâce à cette optimisation, le test passe en 12min pour 100 000 utilisateurs contre plus de 17h.
+
+- _Pour TrackUserLocation :_  Avec le même but de traiter 100 000 utilisateurs mais cette fois ci en 20min, il a fallu optimiser la fonction TrackUserLocation en utilisant la même technique le test précédent, c'est à dire en faisant une surchage de méthode pour renvoyer soit une liste d'utilisateurs, soit un seul utilisateur. Dans la surcharge qui renvoieune liste d'utilisateurs on utilise du parallélisme avec Parallel.For pour pouvoir ajouter les lieux visités de plusieurs utilisateurs sur différents threads (sur la méthode TrackUserLocation qui renvoie qu'un utilisateur). Ainsi, grâce à cette optimisation, le test passe en 2min pour 100 000 utilisateurs contre plus de 2h.
 
 ---
 ## Mise en place d'un pipeline d'intégration continue
