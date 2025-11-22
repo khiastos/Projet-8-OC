@@ -54,7 +54,7 @@ public class TourGuideController : ControllerBase
         {
             var attractionLoc = new Locations(a.Latitude, a.Longitude);
             var distance = _rewardsService.GetDistance(attractionLoc, userLoc);
-            var points = _rewardsService.GetRewardPoints(a, user);
+            var points = _rewardsService.GetRewardPointsAsync(a, user);
 
             return new
             {
@@ -73,7 +73,7 @@ public class TourGuideController : ControllerBase
               userLoc.Longitude,
               // Round distance to 2 decimal places
               Math.Round(x.Distance, 2),
-              x.Points
+              x.Points.Result
               ))
             .ToList();
 

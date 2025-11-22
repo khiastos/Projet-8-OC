@@ -34,7 +34,7 @@ namespace TourGuideTest
             allUsers.ForEach(u => u.AddToVisitedLocations(new VisitedLocation(u.UserId, attraction, DateTime.Now)));
 
             // Calcul des récompenses (fait en parallèle dans la méthode)
-            _fixture.RewardsService.CalculateRewards(allUsers);
+            _fixture.RewardsService.CalculateRewardsAsync(allUsers);
 
             stopWatch.Stop();
 

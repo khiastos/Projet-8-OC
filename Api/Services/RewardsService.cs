@@ -39,66 +39,86 @@ public class RewardsService : IRewardsService
     }
 
     // Permet de calculer les Rewards pour plusieurs users en même temps avec du parallélisme
-    public void CalculateRewards(List<User> users)
+    public async Task CalculateRewardsAsync(List<User> users)
     {
         var sw = Stopwatch.StartNew();
-        // Compteur thread-safe
+
+        // Compteur thread-safe pour suivre le nombre d'utilisateurs traités
         Interlocked.Increment(ref count);
 
-        Parallel.ForEach(users, CalculateRewards);
+        // Configure les options de parallélisme pour utiliser un nombre élevé de threads selon le nombre de processeurs
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount * 10
+        };
 
+        // Permet de traiter chaque user en parallèle pour calculer ses rewards
+        await Parallel.ForEachAsync(users, options, async (user, cancellationToken) =>
+        {
+            await CalculateRewardsAsync(user);
+        });
         sw.Stop();
     }
 
-    public void CalculateRewards(User user)
+    public async Task CalculateRewardsAsync(User user)
     {
-        // Snapshots pour éviter les problèmes de collection modifiée pendant l'itération
+        // Assure que la liste des VisitedLocations n'est pas nulle, sinon on utilise la location actuelle
         var userLocations = (user.VisitedLocations ?? new List<VisitedLocation>()).ToArray();
-
         if (userLocations.Length == 0)
         {
             var current = _gpsUtil.GetUserLocation(user.UserId);
             userLocations = new[] { current };
         }
 
-        // Récupération des attractions et conversion en tableau pour performance
+        // Assure que la liste des Attractions n'est pas nulle (sinon on utilise une liste vide) et on récupère les noms des attractions déjà récompensées
         var attractions = (_gpsUtil.GetAttractions() ?? new List<Attraction>()).ToArray();
+        var rewardedAttractionNames = new HashSet<string>((user.UserRewards ?? new List<UserReward>()).Select(r => r.Attraction.AttractionName));
 
-        // Récompenses déjà attribuées pour éviter les doublons (HashSet pour performance)
-        var rewardedNames = new HashSet<string>((user.UserRewards ?? new List<UserReward>())
-                .Select(r => r.Attraction.AttractionName));
-
+        // Trouve toutes les paires (VisitedLocation, Attraction) qui sont proches et pas encore récompensées
+        var nearbyPairs = new List<(VisitedLocation location, Attraction attraction)>();
 
         foreach (var visitedLocation in userLocations)
         {
             foreach (var attraction in attractions)
             {
-                var key = (user.UserId, attraction.AttractionName);
-                double distance;
-
-                if (_distanceCache.ContainsKey(key))
+                if (rewardedAttractionNames.Contains(attraction.AttractionName))
                 {
-                    distance = _distanceCache[key];
+                    continue;
                 }
-                else
-                {
-                    distance = GetDistance(visitedLocation.Location, attraction);
-                    _distanceCache.TryAdd(key, distance);
-                }
-
-                // Vérification de la proximité
+                // Vérifie si la VisitedLocation est proche de l'Attraction
                 if (NearAttraction(visitedLocation, attraction))
                 {
-                    var points = GetRewardPoints(attraction, user);
-                    var reward = new UserReward(visitedLocation, attraction, points);
+                    // Ajoute la paire à la liste des paires proches
+                    nearbyPairs.Add((visitedLocation, attraction));
+                    // Marque cette attraction comme déjà récompensée pour éviter les doublons
+                    rewardedAttractionNames.Add(attraction.AttractionName);
+                }
+            }
+        }
+        // Si aucune paire proche n'a été trouvée, on retourne immédiatement
+        if (nearbyPairs.Count == 0)
+        {
+            return;
+        }
+        // Calcule les points de récompense pour chaque paire 
+        var rewardTasks = nearbyPairs.Select(async pair =>
+        {
+            var points = await GetRewardPointsAsync(pair.attraction, user);
+            return (pair.location, pair.attraction, points);
+        }).ToList();
 
-                    lock (user)
-                    {
-                        if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
-                        {
-                            user.AddUserReward(reward);
-                        }
-                    }
+        // WhenAll pour attendre que toutes les tâches soient terminées
+        var results = await Task.WhenAll(rewardTasks);
+
+        // Ajoute les récompenses à l'utilisateur de manière thread-safe
+        lock (user)
+        {
+            foreach (var (location, attraction, points) in results)
+            {
+                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
+                {
+                    var reward = new UserReward(location, attraction, points);
+                    user.AddUserReward(reward);
                 }
             }
         }
@@ -115,10 +135,11 @@ public class RewardsService : IRewardsService
         return GetDistance(attraction, visitedLocation.Location) <= _proximityBuffer;
     }
 
-    public int GetRewardPoints(Attraction attraction, User user)
+    public Task<int> GetRewardPointsAsync(Attraction attraction, User user)
     {
-        return _rewardsCentral.GetAttractionRewardPoints(attraction.AttractionId, user.UserId);
+        return Task.Run(() => _rewardsCentral.GetAttractionRewardPoints(attraction.AttractionId, user.UserId));
     }
+
 
     public double GetDistance(Locations loc1, Locations loc2)
     {

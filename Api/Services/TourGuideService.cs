@@ -89,7 +89,7 @@ public class TourGuideService : ITourGuideService
         {
             users[i].AddToVisitedLocations(visitedLocations[i]);
         });
-        _rewardsService.CalculateRewards(users);
+        _rewardsService.CalculateRewardsAsync(users);
 
         return visitedLocations.ToArray();
     }
@@ -97,7 +97,7 @@ public class TourGuideService : ITourGuideService
     {
         VisitedLocation visitedLocation = _gpsUtil.GetUserLocation(user.UserId);
         user.AddToVisitedLocations(visitedLocation);
-        _rewardsService.CalculateRewards(user);
+        _rewardsService.CalculateRewardsAsync(user);
         return visitedLocation;
     }
 
