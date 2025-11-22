@@ -2,6 +2,6 @@
 {
     public interface IRewardCentral
     {
-        Task<int> GetAttractionRewardPoints(Guid attractionId, Guid userId);
+        Task<int> GetAttractionRewardPointsAsync(Guid attractionId, Guid userId);
     }
 }

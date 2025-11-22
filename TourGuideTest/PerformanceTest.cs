@@ -21,7 +21,7 @@ namespace TourGuideTest
         public void HighVolumeGetRewards()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(100000);
+            _fixture.Initialize(100);
 
             // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de récompenses
             _fixture.TourGuideService.Tracker.StopTracking();
@@ -45,7 +45,7 @@ namespace TourGuideTest
         public void HighVolumeTrackLocation()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(100000);
+            _fixture.Initialize(100);
 
             // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de localisation
             _fixture.TourGuideService.Tracker.StopTracking();

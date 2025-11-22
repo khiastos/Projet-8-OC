@@ -2,7 +2,7 @@
 
 public class RewardCentral
 {
-    public async Task<int> GetAttractionRewardPoints(Guid attractionId, Guid userId)
+    public async Task<int> GetAttractionRewardPointsAsync(Guid attractionId, Guid userId)
     {
         int randomDelay = new Random().Next(1, 1000);
         await Task.Delay(randomDelay);

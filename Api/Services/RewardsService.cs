@@ -137,7 +137,7 @@ public class RewardsService : IRewardsService
 
     public Task<int> GetRewardPointsAsync(Attraction attraction, User user)
     {
-        return Task.Run(() => _rewardsCentral.GetAttractionRewardPoints(attraction.AttractionId, user.UserId));
+        return Task.Run(() => _rewardsCentral.GetAttractionRewardPointsAsync(attraction.AttractionId, user.UserId));
     }
 
 
