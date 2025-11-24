@@ -97,7 +97,7 @@ public class TourGuideService : ITourGuideService
     {
         VisitedLocation visitedLocation = _gpsUtil.GetUserLocation(user.UserId);
         user.AddToVisitedLocations(visitedLocation);
-        _rewardsService.CalculateRewardsAsync(user);
+        _rewardsService.CalculateRewardsAsync(user).Wait();
         return visitedLocation;
     }
 

@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using GpsUtil.Location;
+﻿using GpsUtil.Location;
 using TourGuide.LibrairiesWrappers.Interfaces;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
@@ -16,16 +14,12 @@ public class RewardsService : IRewardsService
     private readonly IGpsUtil _gpsUtil;
     private readonly IRewardCentral _rewardsCentral;
     private static int count = 0;
-    private readonly List<Attraction> _attractions;
-    private readonly ConcurrentDictionary<(Guid, string), double> _distanceCache;
 
     public RewardsService(IGpsUtil gpsUtil, IRewardCentral rewardCentral)
     {
         _gpsUtil = gpsUtil;
-        _attractions = _gpsUtil.GetAttractions();
         _rewardsCentral = rewardCentral;
         _proximityBuffer = _defaultProximityBuffer;
-        _distanceCache = new ConcurrentDictionary<(Guid, string), double>();
     }
 
     public void SetProximityBuffer(int proximityBuffer)
@@ -41,8 +35,6 @@ public class RewardsService : IRewardsService
     // Permet de calculer les Rewards pour plusieurs users en même temps avec du parallélisme
     public async Task CalculateRewardsAsync(List<User> users)
     {
-        var sw = Stopwatch.StartNew();
-
         // Compteur thread-safe pour suivre le nombre d'utilisateurs traités
         Interlocked.Increment(ref count);
 
@@ -57,7 +49,6 @@ public class RewardsService : IRewardsService
         {
             await CalculateRewardsAsync(user);
         });
-        sw.Stop();
     }
 
     public async Task CalculateRewardsAsync(User user)
@@ -137,8 +128,9 @@ public class RewardsService : IRewardsService
 
     public Task<int> GetRewardPointsAsync(Attraction attraction, User user)
     {
-        return Task.Run(() => _rewardsCentral.GetAttractionRewardPointsAsync(attraction.AttractionId, user.UserId));
+        return _rewardsCentral.GetAttractionRewardPointsAsync(attraction.AttractionId, user.UserId);
     }
+
 
 
     public double GetDistance(Locations loc1, Locations loc2)

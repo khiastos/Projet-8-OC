@@ -18,10 +18,10 @@ namespace TourGuideTest
         }
 
         [Fact]
-        public void HighVolumeGetRewards()
+        public async void HighVolumeGetRewards()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(100);
+            _fixture.Initialize(1000);
 
             // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de récompenses
             _fixture.TourGuideService.Tracker.StopTracking();
@@ -34,7 +34,8 @@ namespace TourGuideTest
             allUsers.ForEach(u => u.AddToVisitedLocations(new VisitedLocation(u.UserId, attraction, DateTime.Now)));
 
             // Calcul des récompenses (fait en parallèle dans la méthode)
-            _fixture.RewardsService.CalculateRewardsAsync(allUsers);
+            // xUnit ne sait pas attendre une méthode async si le test n'est pas async
+            await _fixture.RewardsService.CalculateRewardsAsync(allUsers);
 
             stopWatch.Stop();
 
@@ -45,7 +46,7 @@ namespace TourGuideTest
         public void HighVolumeTrackLocation()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
-            _fixture.Initialize(100);
+            _fixture.Initialize(1000);
 
             // Arrêter le suivi des utilisateurs pour éviter les conflits pendant le test de localisation
             _fixture.TourGuideService.Tracker.StopTracking();

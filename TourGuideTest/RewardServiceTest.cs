@@ -39,7 +39,7 @@ public class RewardServiceTest : IClassFixture<DependencyFixture>
         _fixture.RewardsService.SetProximityBuffer(int.MaxValue);
 
         var user = _fixture.TourGuideService.GetAllUsers().First();
-        _fixture.RewardsService.CalculateRewardsAsync(user);
+        _fixture.RewardsService.CalculateRewardsAsync(user).Wait();
         var userRewards = _fixture.TourGuideService.GetUserRewards(user);
         _fixture.TourGuideService.Tracker.StopTracking();
 
