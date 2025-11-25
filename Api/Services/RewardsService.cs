@@ -51,6 +51,7 @@ public class RewardsService : IRewardsService
         });
     }
 
+    // Méthode de base
     public async Task CalculateRewardsAsync(User user)
     {
         // Assure que la liste des VisitedLocations n'est pas nulle, sinon on utilise la location actuelle
